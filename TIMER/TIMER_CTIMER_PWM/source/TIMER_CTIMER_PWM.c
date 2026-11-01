@@ -1,0 +1,50 @@
+/*
+ * AUTOR 		: UGB_Dev
+ * DATE  		: 12/10/2026
+ * VERSION 		: V1.0.0
+ * DESCRIPTION	: CTIMER; Se configura el periferico CTIMER2 como base de tiempo para generar
+ *                PWM de 1 segundo.
+ */
+
+#include <stdio.h>
+#include "board.h"
+#include "peripherals.h"
+#include "pin_mux.h"
+#include "clock_config.h"
+#include "fsl_debug_console.h"
+
+int main(void) {
+
+    /* Init board hardware. */
+    BOARD_InitBootPins();
+    BOARD_InitBootClocks();
+    BOARD_InitBootPeripherals();
+#ifndef BOARD_INIT_DEBUG_CONSOLE_PERIPHERAL
+    /* Init FSL debug console. */
+    BOARD_InitDebugConsole();
+#endif
+
+    /* PASO 1: CONFIGURACION DEL RELOJ */
+    SYSCON -> AHBCLKCTRL0 |= SYSCON_AHBCLKCTRL0_GPIO1_MASK | SYSCON_AHBCLKCTRL0_PORT1_MASK ;
+    SYSCON -> AHBCLKCTRL1 |= SYSCON_AHBCLKCTRL1_TIMER2_MASK;
+
+    /* PASO 2: CONFIGURACION DE PIN COMO SALIDA */
+    PORT1 -> PCR[10]  |=  0x4 << PORT_PCR_MUX_SHIFT; // PIN GPIO1_10 COMO ALT4
+    GPIO1 -> PDDR |= GPIO_PDDR_PDD19_MASK; // PIN GPIO1_10 COMO SALIDA PWM ALTERN FUNCTION ALT4
+
+    /* PASO 3: CONFIGURACION DEL TIMER */
+    SYSCON -> CTIMERCLKSEL[2] &= ~SYSCON_CTIMERCLKSEL_SEL_MASK; // BORRA CONFIGURACION POR DEFECTO
+	SYSCON -> CTIMERCLKSEL[2] |= 0x1; // FUENTE DE RELOJ POR PLL0 (150 MHz) PARA EL TIMER 3
+	SYSCON -> CTIMERCLKDIV[2] &= ~SYSCON_CTIMERXCLKDIV_CTIMERCLKDIV_HALT_MASK; // BORRA BIT HALT ( EVITA BLOQUEO EN MICROCCONTROLADOR)
+
+	CTIMER2 -> MCR |= CTIMER_MCR_MR3R_MASK; // RESET TIMER EN CANAL 3 (CANAL 3 COMO PERIODO DEL PWM)
+    CTIMER2 -> PWMC |= CTIMER_PWMC_PWMEN0_MASK; // PWM EN CANAL 0 (CANAL 0 COMO DUTY CYCLE)
+	CTIMER2 -> PR = (SystemCoreClock / 1000) -1; // PR = (150 MHz / 1 KHz)-1 = 149 k TICKS PARA UNA BASE DE TIEMPO DE 1ms
+    CTIMER2 -> MR[3] = 1000 ; // 1000 * 1msbase = 1000 ms PARA PERIODO (T)
+    CTIMER2 -> MR[0] = 500 ; // 500 * 1msbase = 500 ms PARA DUTY CYCLE (D)
+
+    CTIMER2 -> TCR |= CTIMER_TCR_CEN_MASK; // HABILITA EL CONTADOR
+
+    while(1) {
+    }
+}
