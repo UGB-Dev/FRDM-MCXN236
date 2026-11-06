@@ -3,7 +3,7 @@
  * DATE  		: 12/10/2026
  * VERSION 		: V1.0.0
  * DESCRIPTION	: CTIMER; Se configura el periferico CTIMER3 como base de tiempo para generar
- *                un toogle en el GPIO4_19 por interrupcion.
+ *                un toogle en el GPIO4_17 por interrupcion.
  */
 
 #include <stdio.h>
